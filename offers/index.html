@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BumWallet Offers</title>
+<style>
+:root {
+  --bg: #f7f7f5;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --muted: #666;
+  --line: #e2e2e0;
+  --accent: #1f6feb;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+header h1 { margin: 0; font-size: 20px; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.controls input, .controls select {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+.controls button, .card button {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+.status { color: var(--muted); margin: 0 0 16px; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.card .top { display: flex; gap: 12px; align-items: center; }
+.card img { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: #eee; }
+.card h2 { margin: 0; font-size: 16px; }
+.card p { margin: 0; color: var(--muted); font-size: 14px; }
+.reward { font-weight: 600; font-size: 15px; }
+.meta { font-size: 12px; color: var(--muted); }
+.steps { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+.card button { margin-top: auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>BumWallet Offers</h1>
+  <div class="controls">
+    <input id="userId" placeholder="User ID" value="testuser1">
+    <select id="country">
+      <option value="US" selected>US</option>
+      <option value="CA">CA</option>
+      <option value="GB">GB</option>
+      <option value="AU">AU</option>
+    </select>
+    <button id="reload">Load offers</button>
+  </div>
+</header>
+<main>
+  <p class="status" id="status">Loading offers</p>
+  <div class="grid" id="grid"></div>
+</main>
+<script>
+const OFFERS_ENDPOINT = "api/offers.php";
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function renderOffer(o) {
+  const steps = o.is_multi_step && Array.isArray(o.steps) && o.steps.length > 1
+    ? `<ol class="steps">${o.steps.map(s => `<li>${esc(s.label)} <strong>+${esc(s.reward)}</strong></li>`).join("")}</ol>`
+    : "";
+  const devices = Array.isArray(o.devices) && o.devices.length ? o.devices.join(", ") : "All devices";
+  return `
+    <div class="card">
+      <div class="top">
+        ${o.image ? `<img src="${esc(o.image)}" alt="">` : `<img alt="">`}
+        <h2>${esc(o.title || o.name)}</h2>
+      </div>
+      <p>${esc(o.description)}</p>
+      ${steps}
+      <div class="reward">Reward: ${esc(o.reward)}</div>
+      <div class="meta">${esc(devices)} · ${esc(o.provider)}</div>
+      <button data-url="${esc(o.url)}">Start offer</button>
+    </div>`;
+}
+
+async function loadOffers() {
+  const status = document.getElementById("status");
+  const grid = document.getElementById("grid");
+  const id = document.getElementById("userId").value.trim();
+  const country = document.getElementById("country").value;
+  grid.innerHTML = "";
+  status.textContent = "Loading offers";
+  if (!id) { status.textContent = "Enter a user ID."; return; }
+  try {
+    const res = await fetch(`${OFFERS_ENDPOINT}?id=${encodeURIComponent(id)}&country=${encodeURIComponent(country)}`);
+    const json = await res.json();
+    if (json.status !== 200 || !Array.isArray(json.data)) {
+      status.textContent = "Offerwall.me returned an error: " + JSON.stringify(json);
+      return;
+    }
+    if (json.data.length === 0) {
+      status.textContent = "No offers available for this user and country.";
+      return;
+    }
+    status.textContent = `${json.data.length} offers available`;
+    grid.innerHTML = json.data.map(renderOffer).join("");
+  } catch (err) {
+    status.textContent = "Could not load offers: " + err.message;
+  }
+}
+
+document.getElementById("reload").addEventListener("click", loadOffers);
+document.getElementById("grid").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-url]");
+  if (btn) window.open(btn.dataset.url, "_blank", "noopener");
+});
+loadOffers();
+</script>
+</body>
+</html>
