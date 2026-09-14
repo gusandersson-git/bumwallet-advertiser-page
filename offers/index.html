@@ -45,11 +45,15 @@
     return Number(n).toLocaleString("en-US", { maximumFractionDigits: 2 });
   }
 
+  function usd(points) {
+    return "$" + (Number(points) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   function fmtPoints(o) {
     if (o.variable) return "Varies";
     if (o.points == null) return "";
-    if (o.goals && o.goals.length) return "<small>Up to</small>" + num(o.points);
-    return num(o.points);
+    const prefix = o.goals && o.goals.length ? "<small>Up to</small>" : "";
+    return prefix + num(o.points) + "<small>" + usd(o.points) + " user / " + usd(o.revenue * 100) + " revenue</small>";
   }
 
   function esc(s) {
@@ -66,7 +70,7 @@
       if (o.goals && o.goals.length) {
         goals =
           "<details><summary>" + o.goals.length + " steps</summary><ul class=\"goals\">" +
-          o.goals.map(g => "<li><span>" + esc(g.description) + "</span><span>" + num(g.points) + "</span></li>").join("") +
+          o.goals.map(g => "<li><span>" + esc(g.description) + "</span><span>" + num(g.points) + " (" + usd(g.points) + ")</span></li>").join("") +
           "</ul></details>";
       }
 
