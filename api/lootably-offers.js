@@ -8,6 +8,10 @@ function clientIP(req) {
   return req.socket && req.socket.remoteAddress ? req.socket.remoteAddress : "";
 }
 
+function round2(n) {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+
 function normalize(o) {
   const base = {
     network: "lootably",
@@ -30,15 +34,15 @@ function normalize(o) {
   if (o.type === "multistep") {
     const goals = (o.goals || []).map((g) => ({
       goalID: g.goalID,
-      description: g.description,
-      revenue: g.revenue,
-      points: g.currencyReward,
+      description: String(g.description || "").replace(/[.:\s]+$/, ""),
+      revenue: round2(g.revenue),
+      points: round2(g.currencyReward),
     }));
     return {
       ...base,
       goals,
-      points: goals.reduce((sum, g) => sum + (Number(g.points) || 0), 0),
-      revenue: goals.reduce((sum, g) => sum + (Number(g.revenue) || 0), 0),
+      points: round2(goals.reduce((sum, g) => sum + g.points, 0)),
+      revenue: round2(goals.reduce((sum, g) => sum + g.revenue, 0)),
       variable: false,
       repeatable: false,
     };
@@ -47,8 +51,8 @@ function normalize(o) {
   const variable = o.currencyReward === "variable" || o.revenue === "variable";
   return {
     ...base,
-    points: variable ? null : Number(o.currencyReward),
-    revenue: variable ? null : Number(o.revenue),
+    points: variable ? null : round2(o.currencyReward),
+    revenue: variable ? null : round2(o.revenue),
     variable,
     repeatable: Boolean(o.multipleConversionsAllowed),
   };
